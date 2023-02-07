@@ -5,20 +5,9 @@ from os.path import *
 import yaml
 
 # ============================ CLI ARGUMENTS HELPERS ============================
-def print_usage():
-	print("TO IMPLEMENT HELP")
-
-def print_error(error):
-	block = "[ERROR] "
-	print(block, error)
-
-def print_debug(dbg):
-	block = "[DEBUG] "
-	print(block, dbg)
-
 def parse_argv(argv):
 	print("[DBG] In parse_argv: argv:", argv)
-	args = {"config_file" : "",
+	args = {"resource_spec" : "",
 			"score" : False,
 			"autofix" : False,
 			"enforce" : False,
@@ -36,7 +25,7 @@ def parse_argv(argv):
 				print("[DBG] CASE --file triggered")
 				# need to store the next item
 				if i+1 < len(argv):
-					args["config_file"] = argv[i+1]
+					args["resource_spec"] = argv[i+1]
 				else:
 					print("[ERROR] Config filename not specified.")
 					exit(1)
@@ -69,30 +58,40 @@ def parse_argv(argv):
 	
 # =============================================================================
 
-# ============================ YAML HELPERS ============================
-def import_yaml_dict(filename):
-	yaml_dict = {}
-	try:
-		with open(filename, 'r') as file_obj:
-			try:
-				yaml_dict = yaml.load(file_obj, Loader=yaml.Loader)
-			except yaml.YAMLError as e:
-				print_error("Configuration file not correctly loaded.")
-				exit(1)
-	except FileNotFoundError as e:
-			print_error(e)
-			exit(1)
-	return yaml_dict
-# =======================================================================
+# ============================ PRINTING HELPERS ============================
+def print_usage():
+	print("TO IMPLEMENT HELP")
+
+def print_error(error):
+	block = "[ERROR] "
+	print(block, error)
+
+def print_debug(dbg):
+	block = "[DEBUG] "
+	print(block, dbg)
+	
+def print_notify(msg):
+	block = "[*] "
+	print(msg, block)
+	
+def print_separator(string):
+	n = 50
+	m = int(n/2)
+	print('=' * m, string, '=' * m)
 
 def print_config_dict(elem, depth):
 	for k,v in elem.items():
+		# first prints the key 
+		
+		# if finds a dict
 		if isinstance(v, dict):
-			print('\t' * depth, f"{k}: ")
+			print('\t' * depth, f"{k}:")
 			print_config_dict(v, depth+1)
+		# if finds a list
 		elif isinstance(v, list):
-			print('\t' * depth, f"{k}: ")
+			print('\t' * depth, f"{k}:")
 			print_config_list(v, depth+1)
+		# if finds just a value
 		else:
 			print('\t' * depth, f"{k}: {v}")
 	return
@@ -100,7 +99,6 @@ def print_config_dict(elem, depth):
 def print_config_list(elem, depth):
 	for i in range(len(elem)):
 		if isinstance(elem[i], dict):
-			print('\t' * depth, f"{elem[i]}: ")
 			print_config_dict(elem[i], depth+1)
 		elif isinstance(elem[i], list):
 			print('\t' * depth, f"{elem[i]}: ")
@@ -109,26 +107,45 @@ def print_config_list(elem, depth):
 			print('\t' * depth, f"- {elem[i]}")
 	return
 
-def print_config(config, depth):
+def print_config(config):
 	if isinstance(config, dict):
-		print_config_dict(config, depth)
+		print_config_dict(config, 0)
 	elif isinstance(config, list):
-		print_config_list(config, depth)
+		print_config_list(config, 0)
 	else:
 		print_error("Configuration not supported")
 	return
+# ==========================================================================
 
-# ========================= SPEC & RULES HELPERS ========================
+# ============================ YAML HELPERS ============================
+# the resulting object could be a list or dict
+def import_yaml(filename):
+	yaml_doc = {}
+	try:
+		with open(filename, 'r') as file_obj:
+			print_notify("Successfully opened YAML file.")
+			try:
+				yaml_doc = yaml.load(file_obj, Loader=yaml.Loader)
+				print_notify("Successfully loaded YAML file.")
+			except yaml.YAMLError as e:
+				print_error("YAML file not correctly loaded.")
+				exit(1)
+	except FileNotFoundError as e:
+			print_error("YAML file not found.")
+			exit(1)
+	return yaml_doc
+# =======================================================================
+
+# ========================= RESOURCE SPEC HELPERS ========================
 
 # reads the resourceSpec in order to find the PodSpec
 # Deployment  -> DeploymentSpec spec  -> PodTemplateSpec template -> PodSpec spec
 # Job         -> JobSpec spec         -> PodTemplateSpec template -> PodSpec spec
 # StatefulSet -> StatefulSetSpec spec -> PodTemplateSpec template -> PodSpec spec
-def import_podspec(filename):
-	resource_spec = import_yaml_dict(filename)
+def find_podspec(resource_spec):
 	
 	if not isinstance(resource_spec, dict):
-		print_error("Resource not recognized")
+		print_error("Resource spec not recognized (it's not a dictionary)")
 		exit(1)
 	
 	pod_spec = {}
@@ -141,7 +158,7 @@ def import_podspec(filename):
 			pod_spec = pod_spec["template"]
 			pod_spec = pod_spec["spec"]
 		else:
-			print_error("Resource not recognized")
+			print_error("Resource not recognized (it's not a Pod nor a Deployment, Job or StatefulSet)")
 			exit(1)
 	except KeyError as e:
 		print_error("Spec is missing some important fields.")
@@ -153,13 +170,18 @@ def import_podspec(filename):
 
 if __name__ == '__main__':
 	# program start
-	args = parse_argv(argv)
-	print_config(args, 0)
+	cli_args = parse_argv(argv)
+	print_separator("CLI ARGS")
+	print_config(cli_args)
+	print_separator("")
 	
 	# import YAML files
-	podspec = import_podspec(args["config_file"])
+	resource_spec = import_yaml(cli_args["resource_spec"])
+	pod_spec = find_podspec(resource_spec)
 	
-	#rules = import_rules()
-	print_config(podspec, 0)
-	config = import_yaml_dict(args["config_file"])
+	# print to tty
+	print_separator("RESOURCE SPEC")
+	print_config(resource_spec)
+	print_separator("POD SPEC")
+	
 	
