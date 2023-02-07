@@ -11,7 +11,8 @@ def parse_argv(argv):
 			"score" : False,
 			"autofix" : False,
 			"enforce" : False,
-			"sec_std" : "Default",
+			"sec_std" : "default",
+			"rules_filename" : "rules.yaml",
 			"output_filename" : ""}
 			
 	for i in range(len(argv)):
@@ -52,32 +53,63 @@ def parse_argv(argv):
 				else:
 					print("[ERROR] Output filename not specified.")
 					exit(1)
+			case "--rules" | "-r":
+				print("[DBG] CASE --rules triggered")
+				if i+1 < len(argv):
+					args["rules_filename"] = argv[i+1]
+				else:
+					print("[ERROR] Rules filename not specified.")
+					exit(1)
 			case _:
 				print(f"[INFO] Argument {argv[i]} not recognized.")
 	return args
+
+def check_args(args):
+	spec_file = args["resource_spec"]
+	rules_file = args["rules_filename"]
 	
+	# resource spec file checks
+	if not exists(spec_file) or not isfile(spec_file):
+		print_error("Specified resource spec file doesn't exists or it isn't a regular file")
+		exit(1)
+	# rules file checks
+	elif not exists(rules_file) or not isfile(rules_file):
+		print_error("Specified rules file doesn't exists or it isn't a regular file")
+		exit(1)
+	else:
+		print_notify("CLI arguments checked.")
+	return 
 # =============================================================================
 
 # ============================ PRINTING HELPERS ============================
 def print_usage():
 	print("TO IMPLEMENT HELP")
 
-def print_error(error):
-	block = "[ERROR] "
-	print(block, error)
+def print_error(*s):
+	error = "[ERROR] "
+	for i in range(len(s)):
+		error = error + s[i]
+	print(error)
 
-def print_debug(dbg):
-	block = "[DEBUG] "
-	print(block, dbg)
+def print_debug(*s):
+	dbg = "[DEBUG] "
+	for i in range(len(s)):
+		dbg = dbg + s[i]
+	print(dbg)
 	
-def print_notify(msg):
-	block = "[*] "
-	print(msg, block)
+def print_notify(*s):
+	msg = "[*] "
+	for i in range(len(s)):
+		msg = msg + s[i]
+	print(msg)
 	
-def print_separator(string):
+def print_separator(*s):
+	msg = ""
+	for i in range(len(s)):
+		msg = msg + s[i]
 	n = 50
 	m = int(n/2)
-	print('=' * m, string, '=' * m)
+	print('=' * m, msg, '=' * m)
 
 def print_config_dict(elem, depth):
 	for k,v in elem.items():
@@ -123,15 +155,15 @@ def import_yaml(filename):
 	yaml_doc = {}
 	try:
 		with open(filename, 'r') as file_obj:
-			print_notify("Successfully opened YAML file.")
+			print_notify("Successfully opened YAML file: ", filename)
 			try:
 				yaml_doc = yaml.load(file_obj, Loader=yaml.Loader)
-				print_notify("Successfully loaded YAML file.")
+				print_notify("Successfully loaded YAML file: ", filename)
 			except yaml.YAMLError as e:
-				print_error("YAML file not correctly loaded.")
+				print_error("YAML file not correctly loaded: ", filename)
 				exit(1)
 	except FileNotFoundError as e:
-			print_error("YAML file not found.")
+			print_error("YAML file not found: ", filename)
 			exit(1)
 	return yaml_doc
 # =======================================================================
@@ -166,22 +198,61 @@ def find_podspec(resource_spec):
 	return pod_spec
 # =======================================================================
 
+# ========================= RULES HELPERS ===============================
+def print_rules_list(rules):
+	for rule in rules:
+		print('\t', rule["field"], " | ", rule["value"])
+
+def print_rules(rules):
+	#check if it's not a dict exit
+	if not isinstance(rules, dict):
+		print_error("The rules aren't arranged in a dict.")
+		exit(1)
+	# iterate over keys and print the rule list
+	for sec_std, rule_list in rules.items():
+		print_separator("SECURITY STANDARD: ", sec_std)
+		print_rules_list(rule_list)
+	print_separator()
+	return
+	
+# drops every rule below the choosen security standard, defaults to the whole
+def cut_rules(rules, sec_std):
+	found = False
+	to_del = []
+	for key in rules.keys():
+		if found:
+			to_del.append(key)
+		elif key == sec_std:
+				found = True
+	for key in to_del:
+		del rules[key]
+	return
+
+# =======================================================================
 # ============================ MAIN FUNCTION ============================
 
 if __name__ == '__main__':
-	# program start
+	# arguments parsing
 	cli_args = parse_argv(argv)
 	print_separator("CLI ARGS")
 	print_config(cli_args)
+	check_args(cli_args)
 	print_separator("")
 	
 	# import YAML files
 	resource_spec = import_yaml(cli_args["resource_spec"])
 	pod_spec = find_podspec(resource_spec)
+	rules = import_yaml(cli_args["rules_filename"])
 	
 	# print to tty
 	print_separator("RESOURCE SPEC")
 	print_config(resource_spec)
+	
 	print_separator("POD SPEC")
+	print_config(pod_spec)
 	
-	
+	print_separator("RULES")
+	print_rules(rules)
+	cut_rules(rules, cli_args["sec_std"])
+	print_separator("CUT RULES")
+	print_rules(rules)

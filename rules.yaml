@@ -1,0 +1,9 @@
+standard:
+    - field: kind
+      allowed_values: ["Pod", "Deployment", "Job", "StatefulSet"]
+    - field: apiVersion
+      allowed_values: ["apps/v1"]
+      
+baseline:
+    - field: spec
+      allowed_values: ["spec1", "spec2"]
