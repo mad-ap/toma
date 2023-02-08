@@ -5,5 +5,7 @@ standard:
       allowed_values: ["apps/v1"]
       
 baseline:
-    - field: spec
-      allowed_values: ["spec1", "spec2"]
+    - field: spec.replicas
+      allowed_values: [1, 2, 3]
+    - field: spec.suka
+      allowed_values: ["ciao"]

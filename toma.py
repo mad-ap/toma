@@ -23,7 +23,6 @@ def parse_argv(argv):
 				print_usage()
 				exit(0)
 			case "--file" | "-f":
-				print("[DBG] CASE --file triggered")
 				# need to store the next item
 				if i+1 < len(argv):
 					args["resource_spec"] = argv[i+1]
@@ -31,37 +30,31 @@ def parse_argv(argv):
 					print("[ERROR] Config filename not specified.")
 					exit(1)
 			case "--score" | "-s":
-				print("[DBG] CASE --score triggered")
 				args["score"] = True
 			case "--autofix" | "-a":
-				print("[DBG] CASE --autofix triggered")
 				args["autofix"] = True
 			case "--enforce" | "-e":
-				print("[DBG] CASE --enforce triggered")
 				args["enforce"] = True
 			case "--security-standard" | "-t":
-				print("[DBG] CASE --security-standard triggered")
 				if i+1 < len(argv):
 					args["sec_std"] = argv[i+1]
 				else:
 					print("[ERROR] Security standard not specified.")
 					exit(1)
 			case "--output" | "-o":
-				print("[DBG] CASE --output triggered")
 				if i+1 < len(argv):
 					args["output_filename"] = argv[i+1]
 				else:
 					print("[ERROR] Output filename not specified.")
 					exit(1)
 			case "--rules" | "-r":
-				print("[DBG] CASE --rules triggered")
 				if i+1 < len(argv):
 					args["rules_filename"] = argv[i+1]
 				else:
 					print("[ERROR] Rules filename not specified.")
 					exit(1)
 			case _:
-				print(f"[INFO] Argument {argv[i]} not recognized.")
+				pass
 	return args
 
 def check_args(args):
@@ -107,7 +100,7 @@ def print_separator(*s):
 	msg = ""
 	for i in range(len(s)):
 		msg = msg + s[i]
-	n = 50
+	n = 60 - len(msg)
 	m = int(n/2)
 	print('=' * m, msg, '=' * m)
 
@@ -201,7 +194,7 @@ def find_podspec(resource_spec):
 # ========================= RULES HELPERS ===============================
 def print_rules_list(rules):
 	for rule in rules:
-		print('\t', rule["field"], " | ", rule["value"])
+		print('\t', rule["field"], " | \t", rule["allowed_values"])
 
 def print_rules(rules):
 	#check if it's not a dict exit
@@ -211,7 +204,9 @@ def print_rules(rules):
 	# iterate over keys and print the rule list
 	for sec_std, rule_list in rules.items():
 		print_separator("SECURITY STANDARD: ", sec_std)
+		print("")
 		print_rules_list(rule_list)
+		print("")
 	print_separator()
 	return
 	
@@ -229,6 +224,101 @@ def cut_rules(rules, sec_std):
 	return
 
 # =======================================================================
+
+# ========================= SCORE HELPERS ===============================
+RIGHT_FIELD = 0
+MISSING_FIELD = 1
+WRONG_FIELD = 2
+
+def contained(string, substring):
+	if string.find(substring) < -1:
+		return True
+	else: 
+		return False
+
+# return the field if found, False otherwise
+def find_field(pod_spec, field_string):
+	fields = field_string.split(sep='.')
+	print("in find_field, fields = ", fields)
+	target = pod_spec
+	try:
+		for f in fields:
+			target = target[f]
+			print("target = ", f)
+	except KeyError as e:
+		return False
+	return target
+
+def check_field_values(field_values, field_allowed_values):
+	if isinstance(field_values, list):
+		if set(field_values).issubset(set(field_allowed_values)):
+			return True
+		else:
+			return False
+	else:
+		if field_values in field_allowed_values:
+			return True
+		else:
+			return False
+
+def check_standard_rule(pod_spec, rule):
+	field_string = rule["field"]
+	field_allowed_values = rule["allowed_values"]
+	# if field not present target will be False, otherwise the element
+	field_values = find_field(pod_spec, field_string)
+	# some rules allows fields to not be defined
+	print("field string: ", field_string)
+	print("alloed values: ", field_allowed_values)
+	print("field  values: ", field_values)
+	can_be_nd = "not defined" in rule["allowed_values"]
+	print("can be not specified: ", can_be_nd)
+	# if not present but can be absent
+	if not field_values and can_be_nd:
+		return RIGHT_FIELD
+	# if not present but required
+	elif not field_values and not can_be_nd:
+		return MISSING_FIELD
+	# if values are correct True, otherwise False
+	elif check_field_values(field_values, field_allowed_values) == True:
+		return RIGHT_FIELD
+	else:
+		return WRONG_FIELD
+
+#def check_containers_rule(pod_spec, rule):
+
+
+def compute_spec_score(pod_spec, rules):
+	# prepares score result dict
+	score = {}
+	for sec_std, rule_list in rules.items():
+		score[sec_std] = {"n_total_rules": len(rule_list), "rules_missing": [], "rules_wrong": []}
+		rules_missing = score[sec_std]["rules_missing"]
+		rules_wrong = score[sec_std]["rules_wrong"]
+		
+		# checks the rules keeping track of the missing and wrong fields
+		result = -1
+		for rule in rule_list:
+			print_debug("Checking rule: ", rule["field"])
+			if contained(rule["field"], "containers[*]"):
+				print_debug("It's a container rule")
+				result = check_containers_rule(pod_spec, rule)
+			else:
+				print_debug("It's a standard rule")
+				result = check_standard_rule(pod_spec, rule)
+			
+			if result == MISSING_FIELD:
+				print_debug("It's missing.")
+				rules_missing.append(rule)
+			elif result == WRONG_FIELD:
+				print_debug("It's wrong.")
+				rules_wrong.append(rule)
+			else:
+				pass
+	
+	return score
+
+# =======================================================================
+
 # ============================ MAIN FUNCTION ============================
 
 if __name__ == '__main__':
@@ -256,3 +346,8 @@ if __name__ == '__main__':
 	cut_rules(rules, cli_args["sec_std"])
 	print_separator("CUT RULES")
 	print_rules(rules)
+	
+	score = compute_spec_score(resource_spec, rules)
+	print_separator("SCORE")
+	print("")
+	print_config(score)
