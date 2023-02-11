@@ -6,7 +6,6 @@ import yaml
 
 # ============================ CLI ARGUMENTS HELPERS ============================
 def parse_argv(argv):
-	print("[DBG] In parse_argv: argv:", argv)
 	args = {"resource_spec" : "",
 			"score" : False,
 			"autofix" : False,
@@ -27,7 +26,7 @@ def parse_argv(argv):
 				if i+1 < len(argv):
 					args["resource_spec"] = argv[i+1]
 				else:
-					print("[ERROR] Config filename not specified.")
+					print("[ERROR] Resource spec filename not specified.")
 					exit(1)
 			case "--score" | "-s":
 				args["score"] = True
@@ -53,6 +52,7 @@ def parse_argv(argv):
 				else:
 					print("[ERROR] Rules filename not specified.")
 					exit(1)
+			# ignores not known parameters
 			case _:
 				pass
 	return args
@@ -102,7 +102,7 @@ def print_separator(*s):
 		msg = msg + s[i]
 	n = 60 - len(msg)
 	m = int(n/2)
-	print('=' * m, msg, '=' * m)
+	print('\n', '=' * m, msg, '=' * m, end="\n\n")
 
 def print_config_dict(elem, depth):
 	for k,v in elem.items():
@@ -204,9 +204,7 @@ def print_rules(rules):
 	# iterate over keys and print the rule list
 	for sec_std, rule_list in rules.items():
 		print_separator("SECURITY STANDARD: ", sec_std)
-		print("")
 		print_rules_list(rule_list)
-		print("")
 	print_separator()
 	return
 	
@@ -317,21 +315,62 @@ def compute_spec_score(pod_spec, rules):
 	
 	return score
 
+def print_score(score):
+	total_total = 0
+	total_missed = 0
+	total_wrong = 0
+	total_percentage = 0.0
+	
+	print_separator("SCORE RESULTS")
+	for sec_std, result in score.items():
+		# metrics
+		total = result["n_total_rules"]
+		missed = len(result["rules_missing"])
+		wrong = len(result["rules_wrong"])
+		percentage = int(((total - missed - wrong) / total) * 100)
+		total_total += total
+		total_missed += missed
+		total_wrong += wrong
+		
+		wrong_rules_list = result["rules_wrong"]
+		missing_rules_list = result["rules_missing"]
+		# printing
+		print(f"Security standard: {sec_std}\nThe spec is {percentage}% compliant.")
+		print(f"Rules {total} | Wrong {wrong} | Missed {missed}")
+		
+		if len(wrong_rules_list) > 0:
+			print("\nWrong rules:")
+			print_rules_list(wrong_rules_list)
+		if len(missing_rules_list) > 0:
+			print("\nMissing rules:")
+			print_rules_list(missing_rules_list)
+		print("")
+	
+	total_percentage = int(((total_total - total_missed - total_wrong) / total_total) * 100)
+	print(f"In total the spec is {total_percentage}% compliant.")
+	print(f"Total rules {total_total} | Total wrong {total_wrong} | Total missed {total_missed}")
 # =======================================================================
 
 # ============================ MAIN FUNCTION ============================
 
 if __name__ == '__main__':
-	# arguments parsing
-	cli_args = parse_argv(argv)
-	print_separator("CLI ARGS")
-	print_config(cli_args)
-	check_args(cli_args)
-	print_separator("")
+	cli_args = {}
+	if len(argv) < 2:
+		print_usage()
+		exit(0)
+	else: 
+		# arguments parsing
+		cli_args = parse_argv(argv[1:])
+		print_separator("CLI ARGS")
+		print_config(cli_args)
+		check_args(cli_args)
+		print_separator("")
 	
 	# import YAML files
+	print_notify("Loading resource spec file...")
 	resource_spec = import_yaml(cli_args["resource_spec"])
 	pod_spec = find_podspec(resource_spec)
+	print_notify("Loading rules file...")
 	rules = import_yaml(cli_args["rules_filename"])
 	
 	# print to tty
@@ -347,7 +386,10 @@ if __name__ == '__main__':
 	print_separator("CUT RULES")
 	print_rules(rules)
 	
-	score = compute_spec_score(resource_spec, rules)
-	print_separator("SCORE")
-	print("")
-	print_config(score)
+	scorer = cli_args["score"]
+	if scorer:
+		score = compute_spec_score(resource_spec, rules)
+		print_separator("SCORE")
+		print("")
+		print_config(score)
+		print_score(score)
