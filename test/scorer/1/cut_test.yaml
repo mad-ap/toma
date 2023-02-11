@@ -1,0 +1,27 @@
+present:
+    - field: "apiVersion"
+      allowed_values: ["apps/v1"]
+    - field: "kind"
+      allowed_values: ["Deployment", "Pod"]
+    - field: "spec.replicas"
+      allowed_values: [1, 2, 3, 4]
+
+required:
+    - field: "spec.template.metadata.labels.notrequired"
+      allowed_values: ["not defined", "ehehehe"]
+    - field: "spec.template.metadata.labels.required"
+      allowed_values: ["ehehehe", "ohohohooh"]
+
+wrong:
+    - field: "spec.template.spec.securityContext.runAsUser"
+      allowed_values: [1000, 2000, 3000]
+    - field: "spec.template.spec.securityContext.runAsGroup"
+      allowed_values: [2000, 3000]
+
+containers:
+    - field: "spec.template.spec.containers[*].image"
+      allowed_values: ["busybox:1.28"]
+    - field: "spec.template.spec.containers[*].moreMissing"
+      allowed_values: ["first"]
+    - field: "spec.template.spec.containers[*].moreWrong"
+      allowed_values: ["right"]

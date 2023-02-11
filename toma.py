@@ -219,6 +219,8 @@ def cut_rules(rules, sec_std):
 				found = True
 	for key in to_del:
 		del rules[key]
+	if found == False:
+		print_error("Security standard not present.")
 	return
 
 # =======================================================================
@@ -229,10 +231,15 @@ MISSING_FIELD = 1
 WRONG_FIELD = 2
 
 def contained(string, substring):
-	if string.find(substring) < -1:
+	if string.find(substring) > -1:
 		return True
 	else: 
 		return False
+
+def cut_containers_string(field_string):
+	guilty = "containers[*]."
+	start = field_string.find(guilty)
+	return field_string[start + len(guilty):]
 
 # return the field if found, False otherwise
 def find_field(pod_spec, field_string):
@@ -243,6 +250,21 @@ def find_field(pod_spec, field_string):
 		for f in fields:
 			target = target[f]
 			print("target = ", f)
+	except KeyError as e:
+		return False
+	return target
+
+def get_containers_spec(pod_spec, field_string):
+	fields = field_string.split(sep='.')
+	print("in get container spec, fields = ", fields)
+	target = pod_spec
+	try:
+		for f in fields:
+			if f == "containers[*]":
+				return target["containers"]
+			else:
+				target = target[f]
+				print("target = ", f)
 	except KeyError as e:
 		return False
 	return target
@@ -259,17 +281,13 @@ def check_field_values(field_values, field_allowed_values):
 		else:
 			return False
 
-def check_standard_rule(pod_spec, rule):
-	field_string = rule["field"]
+def classify_field(field_values, rule):
 	field_allowed_values = rule["allowed_values"]
-	# if field not present target will be False, otherwise the element
-	field_values = find_field(pod_spec, field_string)
-	# some rules allows fields to not be defined
-	print("field string: ", field_string)
-	print("alloed values: ", field_allowed_values)
-	print("field  values: ", field_values)
 	can_be_nd = "not defined" in rule["allowed_values"]
+	
+	print("field allowed_values: ", field_allowed_values)
 	print("can be not specified: ", can_be_nd)
+	
 	# if not present but can be absent
 	if not field_values and can_be_nd:
 		return RIGHT_FIELD
@@ -282,7 +300,56 @@ def check_standard_rule(pod_spec, rule):
 	else:
 		return WRONG_FIELD
 
-#def check_containers_rule(pod_spec, rule):
+def check_standard_rule(pod_spec, rule):
+	field_string = rule["field"]
+	# if field not present target will be False, otherwise the element
+	field_values = find_field(pod_spec, field_string)
+	# some rules allows fields to not be defined
+	print("field string: ", field_string)
+	print("field  values: ", field_values)
+	
+	return classify_field(field_values, rule)
+	
+
+def check_containers_rule(pod_spec, rule):
+	field_string = rule["field"]
+	field_allowed_values = rule["allowed_values"]
+	
+	# try to navigate until find containers[*]
+	containers_spec = get_containers_spec(pod_spec, field_string)
+	n_containers = len(containers_spec)
+	
+	print("In checking containers rule")
+	print("field string: ", field_string)
+	print("allowed_values: ", field_allowed_values)
+	
+	n_right_fields = 0
+	n_wrong_fields = 0
+	n_missing_fields = 0
+	
+	# cutting field string after containers[*]
+	field_string = cut_containers_string(field_string)
+	for c in containers_spec:
+		field_values = find_field(c, field_string)
+		classification = classify_field(field_values, rule)
+		
+		if classification == RIGHT_FIELD:
+			n_right_fields += 1
+		elif classification == WRONG_FIELD:
+			n_wrong_fields +=1
+		elif classification == MISSING_FIELD:
+			n_missing_fields +=1
+		else:
+			print_error("Cannot classify field")
+	
+	# just if they're all ok they are right
+	if n_right_fields == n_containers:
+		return RIGHT_FIELD
+	# if there are more wrong we consider it wrong
+	elif n_wrong_fields > n_missing_fields:
+		return WRONG_FIELD
+	else:
+		return MISSING_FIELD
 
 
 def compute_spec_score(pod_spec, rules):
