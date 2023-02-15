@@ -17,17 +17,14 @@ spec:
                 runAsGroup: 2002
             containers:
                 - name: test-busybox
+                  notMissing: something
                   image: busybox:1.28
-                  moreMissing: first
-                  moreWrong: wrong
                   command: [ "sh", "-c", "sleep 1h" ]
                 - name: test_container1
+                  notMissing: something
                   image: busybox:1.28
-                  present_second: second
-                  moreWrong: wrong
                   command: [ "sh", "-c", "sleep 1h" ]
                 - name: test-busybox
+                  notMissing: something
                   image: busybox:1.28
-                  present_first: first
-                  moreWrong: right
                   command: [ "sh", "-c", "sleep 1h" ]

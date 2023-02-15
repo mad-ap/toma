@@ -123,10 +123,11 @@ def print_config_dict(elem, depth):
 
 def print_config_list(elem, depth):
 	for i in range(len(elem)):
+		print('\t' * depth, "- ")
 		if isinstance(elem[i], dict):
 			print_config_dict(elem[i], depth+1)
 		elif isinstance(elem[i], list):
-			print('\t' * depth, f"{elem[i]}: ")
+			print('\t' * depth, f"- {elem[i]}: ")
 			print_config_list(v, depth+1)
 		else:
 			print('\t' * depth, f"- {elem[i]}")
@@ -141,6 +142,18 @@ def print_config(config):
 		print_error("Configuration not supported")
 	return
 # ==========================================================================
+
+# ============================ STRING HELPERS ============================
+def contained(string, substring):
+	if string.find(substring) > -1:
+		return True
+	else: 
+		return False
+
+def cut_containers_string(field_string):
+	guilty = "containers[*]."
+	start = field_string.find(guilty)
+	return field_string[start + len(guilty):]
 
 # ============================ YAML HELPERS ============================
 # the resulting object could be a list or dict
@@ -159,9 +172,49 @@ def import_yaml(filename):
 			print_error("YAML file not found: ", filename)
 			exit(1)
 	return yaml_doc
+
+def export_yaml(resource_spec, output_filename):
+	with open(output_filename, 'w') as output_file_object:
+		print_notify("Successfully opened file for writing: ", output_filename)
+		try:
+			yaml.dump(resource_spec, output_file_object, default_flow_style=False)
+			print_notify("Successfully saved YAML file: ", output_filename)
+		except yaml.YAMLError as error:
+			print_error("Problems saving the YAML file: ", output_filename)
+			exit(1)
+	return
+
 # =======================================================================
 
 # ========================= RESOURCE SPEC HELPERS ========================
+
+# return the field if found, False otherwise
+def find_field(pod_spec, field_string):
+	fields = field_string.split(sep='.')
+	print("in find_field, fields = ", fields)
+	target = pod_spec
+	try:
+		for f in fields:
+			target = target[f]
+			print("target = ", f)
+	except KeyError as e:
+		return False
+	return target
+
+def get_containers_spec(pod_spec, field_string):
+	fields = field_string.split(sep='.')
+	print("in get container spec, fields = ", fields)
+	target = pod_spec
+	try:
+		for f in fields:
+			if f == "containers[*]":
+				return target["containers"]
+			else:
+				target = target[f]
+				print("target = ", f)
+	except KeyError as e:
+		return False
+	return target
 
 # reads the resourceSpec in order to find the PodSpec
 # Deployment  -> DeploymentSpec spec  -> PodTemplateSpec template -> PodSpec spec
@@ -230,45 +283,6 @@ RIGHT_FIELD = 0
 MISSING_FIELD = 1
 WRONG_FIELD = 2
 
-def contained(string, substring):
-	if string.find(substring) > -1:
-		return True
-	else: 
-		return False
-
-def cut_containers_string(field_string):
-	guilty = "containers[*]."
-	start = field_string.find(guilty)
-	return field_string[start + len(guilty):]
-
-# return the field if found, False otherwise
-def find_field(pod_spec, field_string):
-	fields = field_string.split(sep='.')
-	print("in find_field, fields = ", fields)
-	target = pod_spec
-	try:
-		for f in fields:
-			target = target[f]
-			print("target = ", f)
-	except KeyError as e:
-		return False
-	return target
-
-def get_containers_spec(pod_spec, field_string):
-	fields = field_string.split(sep='.')
-	print("in get container spec, fields = ", fields)
-	target = pod_spec
-	try:
-		for f in fields:
-			if f == "containers[*]":
-				return target["containers"]
-			else:
-				target = target[f]
-				print("target = ", f)
-	except KeyError as e:
-		return False
-	return target
-
 def check_field_values(field_values, field_allowed_values):
 	if isinstance(field_values, list):
 		if set(field_values).issubset(set(field_allowed_values)):
@@ -306,16 +320,15 @@ def check_standard_rule(pod_spec, rule):
 	field_values = find_field(pod_spec, field_string)
 	# some rules allows fields to not be defined
 	print("field string: ", field_string)
-	print("field  values: ", field_values)
+	print("field values: ", field_values)
 	
 	return classify_field(field_values, rule)
-	
 
 def check_containers_rule(pod_spec, rule):
 	field_string = rule["field"]
 	field_allowed_values = rule["allowed_values"]
 	
-	# try to navigate until find containers[*]
+	# try to navigate until find containers field
 	containers_spec = get_containers_spec(pod_spec, field_string)
 	n_containers = len(containers_spec)
 	
@@ -336,9 +349,9 @@ def check_containers_rule(pod_spec, rule):
 		if classification == RIGHT_FIELD:
 			n_right_fields += 1
 		elif classification == WRONG_FIELD:
-			n_wrong_fields +=1
+			n_wrong_fields += 1
 		elif classification == MISSING_FIELD:
-			n_missing_fields +=1
+			n_missing_fields += 1
 		else:
 			print_error("Cannot classify field")
 	
@@ -416,7 +429,96 @@ def print_score(score):
 	total_percentage = int(((total_total - total_missed - total_wrong) / total_total) * 100)
 	print(f"In total the spec is {total_percentage}% compliant.")
 	print(f"Total rules {total_total} | Total wrong {total_wrong} | Total missed {total_missed}")
-# =======================================================================
+
+# ========================= AUTOFIX HELPERS ===============================
+
+# adds the field with value, in spec 
+def add_field(spec, field_string, value):
+	target = spec
+	fields = field_string.split('.')
+	
+	print("in add_field with fields: ", fields)
+	print("present fields: ")
+	i = 0
+	
+	# advancing in existing fields
+	while i < len(fields[:-1]) and fields[i] in target.keys():
+		target = target[fields[i]]
+		print(fields[i], " --> ", end='')
+		i += 1
+	print("")
+	
+	print("not present fields: ")
+	# advancing in non existing fields creating them
+	while i < len(fields[:-1]):
+		target[fields[i]] = {}
+		target = target[fields[i]]
+		print(fields[i], " --> ", end='')
+		i += 1
+	print("target --> ", target)
+	print(fields[i])
+	 
+	target[fields[i]] = value
+	return
+
+def fix_missing_field(resource_spec, rule):
+	field_string = rule["field"]
+	value = rule["allowed_values"][0]
+	print("in fix_missing_field ---> ", field_string, value)
+	
+	# if containers[*] rule
+	if contained(field_string, "containers[*]"):
+		print("it's a container missing rule")
+		# first we find the containers field
+		containers_spec = get_containers_spec(resource_spec, field_string)
+		# then we cut the field string for obtaining the fields to search in the containers
+		field_string = cut_containers_string(field_string)
+		
+		for container in containers_spec:
+			print("container: ", container)
+			print("adding missing rule --> ", field_string, value)
+			add_field(container, field_string, value)
+	# if standard rule
+	else:
+		print("it's a standard missing rule")
+		add_field(resource_spec, field_string, value)
+
+def fix_wrong_field(resource_spec, rule):
+	field_string = rule["field"]
+	value = rule["allowed_values"][0]
+	print("in fix_wrong_field ---> ", field_string, value)
+	
+	# if containers[*] rule
+	if contained(field_string, "containers[*]"):
+		print("it's a container wrong rule")
+		# first we find the containers field
+		containers_spec = get_containers_spec(resource_spec, field_string)
+		# then we cut the field string for obtaining the fields to search in the containers
+		field_string = cut_containers_string(field_string)
+		
+		for container in containers_spec:
+			print("container: ", container)
+			print("adding wrong rule --> ", field_string, value)
+			add_field(container, field_string, value)
+	# if standard rule
+	else:
+		print("it's a standard wrong rule")
+		add_field(resource_spec, field_string, value)
+
+# this will autofix the resource spec dict based on the score result
+def fix_spec(resource_spec, score):
+	print("In fix_spec")
+	for sec_std, result in score.items():
+		print("security standard: ", sec_std)
+		wrong_rules_list = result["rules_wrong"]
+		missing_rules_list = result["rules_missing"]
+		
+		for rule in missing_rules_list:
+			fix_missing_field(resource_spec, rule)
+		
+		for rule in wrong_rules_list:
+			fix_wrong_field(resource_spec, rule)
+		
 
 # ============================ MAIN FUNCTION ============================
 
@@ -454,9 +556,20 @@ if __name__ == '__main__':
 	print_rules(rules)
 	
 	scorer = cli_args["score"]
+	score = compute_spec_score(resource_spec, rules)
 	if scorer:
-		score = compute_spec_score(resource_spec, rules)
 		print_separator("SCORE")
 		print("")
 		print_config(score)
 		print_score(score)
+	
+	autofix = cli_args["autofix"]
+	if autofix:
+		fixed_resource_spec = fix_spec(resource_spec, score)
+		output_filename = cli_args["output_filename"]
+		
+		if output_filename != "":
+			print_notify("Saving resource spec to: ", output_filename)
+			export_yaml(resource_spec, output_filename)
+		else:
+			print_config(resource_spec)
