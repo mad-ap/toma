@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: test-name
+spec:
+    replicas: 3
+    selector:
+        matchLabels:
+            app: test-app
+    template:
+        metadata:
+            labels:
+                app: test-app
+        spec:
+            securityContext:
+                runAsUser: 1001
+                runAsGroup: 2002
+            containers:
+                - name: test-container-1
+                  image: test-image-1
+                  command: [ "sh", "-c", "sleep 1h" ]
+                - name: test-container-2
+                  image: test-image-2
+                  command: [ "sh", "-c", "sleep 1h" ]
+                - name: test-container-3
+                  image: test-image-3
+                  command: [ "sh", "-c", "sleep 1h" ]

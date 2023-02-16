@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  missing1: missing-value1
+  missing2: missing-value2
+  name: test-name
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test-app
+      missingLabel1: labelValue1
+      missingLabel2: labelValue2
+  template:
+    anotherMissing: missingValue
+    metadata:
+      labels:
+        app: test-app
+        myLabel: my-label
+    spec:
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep 1h
+        image: test-image-1
+        name: test-container-1
+      - command:
+        - sh
+        - -c
+        - sleep 1h
+        image: test-image-2
+        name: test-container-2
+      - command:
+        - sh
+        - -c
+        - sleep 1h
+        image: test-image-3
+        name: test-container-3
+      securityContext:
+        runAsGroup: 2002
+        runAsUser: 1001

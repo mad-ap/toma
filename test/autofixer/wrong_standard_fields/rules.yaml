@@ -1,0 +1,13 @@
+standard-wrong-rules:
+    - field: "metadata.missing1"
+      allowed_values: ["missing-value1"]
+    - field: "metadata.missing2"
+      allowed_values: ["missing-value2"]
+    - field: "spec.selector.matchLabels.missingLabel1"
+      allowed_values: ["labelValue1"]
+    - field: "spec.selector.matchLabels.missingLabel2"
+      allowed_values: ["labelValue2"]
+    - field: "spec.template.metadata.labels.myLabel"
+      allowed_values: ["my-label"]
+    - field: "spec.template.anotherMissing"
+      allowed_values: ["missingValue"]

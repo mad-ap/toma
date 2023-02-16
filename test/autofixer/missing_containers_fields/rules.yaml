@@ -1,0 +1,9 @@
+containers-missing-rules:
+    - field: "spec.template.spec.containers[*].notMissing"
+      allowed_values: ["not-missing-value"]
+    - field: "spec.template.spec.containers[*].someMissing"
+      allowed_values: ["some-missing-new"]
+    - field: "spec.template.spec.containers[*].missingLabel1"
+      allowed_values: ["labelValue1"]
+    - field: "spec.template.spec.containers[*].missingLabel2"
+      allowed_values: ["labelValue2"]
