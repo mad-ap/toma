@@ -1,11 +1,7 @@
-standard:
-    - field: kind
-      allowed_values: ["Pod", "Deployment", "Job", "StatefulSet"]
-    - field: apiVersion
-      allowed_values: ["apps/v1"]
-      
 baseline:
-    - field: spec.replicas
-      allowed_values: [1, 2, 3]
-    - field: spec.suka
-      allowed_values: ["ciao"]
+    - field: spec.hostNetwork
+      allowed_values: [false, "not defined"]
+    - field: spec.hostPID
+      allowed_values: [false, "not defined"]
+    - field: spec.hostIPC
+      allowed_values: [false, "not defined"]

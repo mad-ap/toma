@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-name
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test-app
+  template:
+    hostIPC: true
+    hostNetwork: true
+    hostPID: true
+    metadata:
+      labels:
+        app: test-app
+    spec:
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep 1h
+        image: test-image-1
+        name: test-container-1
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: NET_BIND_SERVICE
+            drop: ALL
+          privileged: false
+          procMount: Default
+          runAsNonRoot: true
+          seLinuxOptions:
+            role: not defined
+            user: not defined
+          seccompProfile:
+            type: RuntimeDefault
+      - command:
+        - sh
+        - -c
+        - sleep 1h
+        image: test-image-2
+        name: test-container-2
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: NET_BIND_SERVICE
+            drop: ALL
+          privileged: false
+          procMount: Default
+          runAsNonRoot: true
+          seLinuxOptions:
+            role: not defined
+            type: container_t
+            user: not defined
+          seccompProfile:
+            type: RuntimeDefault
+      - command:
+        - sh
+        - -c
+        - sleep 1h
+        image: test-image-3
+        name: test-container-3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add: NET_BIND_SERVICE
+            drop: ALL
+          privileged: false
+          procMount: Default
+          runAsNonRoot: true
+          seLinuxOptions:
+            role: not defined
+            user: not defined
+          seccompProfile:
+            type: RuntimeDefault
+      securityContext:
+        runAsGroup: 2002
+        runAsNonRoot: true
+        runAsUser: not defined
+        seLinuxOptions:
+          role: not defined
+          type: container_t
+          user: not defined
+        seccompProfile:
+          type: RuntimeDefault

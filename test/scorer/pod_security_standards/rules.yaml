@@ -1,0 +1,56 @@
+baseline:
+    # host rules
+    - field: "spec.hostNetwork"
+      allowed_values: [false, "not defined"]
+    - field: "spec.hostPID"
+      allowed_values: [false, "not defined"]
+    - field: "spec.hostIPC"
+      allowed_values: [false, "not defined"]
+    # privileges rules
+    - field: "spec.containers[*].securityContext.privileged"
+      allowed_values: [false, "not defined"]
+    - field: "spec.containers[*].securityContext.capabilities.add"
+      allowed_values: ["AUDIT_WRITE", "CHOWN", "DAC_OVERRIDE", "FOWNER", "FSETID", "KILL", "MKNOD", "NET_BIND_SERVICE", "SETFCAP", "SETPCAP", "SETUID", "SETGID", "SYS_CHROOT", "not defined"]
+    - field: "spec.containers[*].securityContext.procMount"
+      allowed_values: ["Default", "not defined"]
+    # SELinux rules
+    - field: "spec.securityContext.seLinuxOptions.type"
+      allowed_values: ["container_t", "container_init_t", "container_kvm_t", "not defined"]
+    - field: "spec.containers[*].securityContext.seLinuxOptions.type"
+      allowed_values: ["container_t", "container_init_t", "container_kvm_t", "not defined"]
+    - field: "spec.securityContext.seLinuxOptions.user"
+      allowed_values: ["not defined"]
+    - field: "spec.containers[*].securityContext.seLinuxOptions.user"
+      allowed_values: ["not defined"]
+    - field: "spec.securityContext.seLinuxOptions.role"
+      allowed_values: ["not defined"]
+    - field: "spec.containers[*].securityContext.seLinuxOptions.role"
+      allowed_values: ["not defined"]
+    # seccomp rules
+    - field: "spec.securityContext.seccompProfile.type"
+      allowed_values: ["RuntimeDefault", "Localhost", "not defined"]
+    - field: "spec.containers[*].securityContext.seccompProfile.type"
+      allowed_values: ["RuntimeDefault", "Localhost", "not defined"]
+
+restricted:
+    # privileges rules
+    - field: "spec.containers[*].securityContext.allowPrivilegeEscalation"
+      allowed_values: [false]
+    - field: "spec.securityContext.runAsNonRoot"
+      allowed_values: [true]
+    - field: "spec.containers[*].securityContext.runAsNonRoot"
+      allowed_values: [true]
+    - field: "spec.securityContext.runAsUser"
+      allowed_values: ["not defined"]
+    - field: "spec.containers[*].securityContext.runAsUser"
+      allowed_values: ["not defined"]
+    # seccomp rules
+    - field: "spec.securityContext.seccompProfile.type"
+      allowed_values: ["RuntimeDefault", "Localhost"]
+    - field: "spec.containers[*].securityContext.seccompProfile.type"
+      allowed_values: ["RuntimeDefault", "Localhost"]
+    # capabilities rules
+    - field: "spec.containers[*].securityContext.capabilities.drop"
+      allowed_values: ["ALL"]
+    - field: "spec.containers[*].securityContext.capabilities.add"
+      allowed_values: ["NET_BIND_SERVICE", "not defined"]

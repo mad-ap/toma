@@ -230,11 +230,10 @@ def find_podspec(resource_spec):
 	try:
 		spec_kind = resource_spec["kind"]
 		if spec_kind == "Pod":
-			pod_spec = resource_spec["spec"]
+			pod_spec = resource_spec
 		elif spec_kind == "Deployment" or spec_kind == "Job" or spec_kind == "StatefulSet":
 			pod_spec = resource_spec["spec"]
 			pod_spec = pod_spec["template"]
-			pod_spec = pod_spec["spec"]
 		else:
 			print_error("Resource not recognized (it's not a Pod nor a Deployment, Job or StatefulSet)")
 			exit(1)
@@ -556,7 +555,7 @@ if __name__ == '__main__':
 	print_rules(rules)
 	
 	scorer = cli_args["score"]
-	score = compute_spec_score(resource_spec, rules)
+	score = compute_spec_score(pod_spec, rules)
 	if scorer:
 		print_separator("SCORE")
 		print("")
@@ -565,7 +564,7 @@ if __name__ == '__main__':
 	
 	autofix = cli_args["autofix"]
 	if autofix:
-		fixed_resource_spec = fix_spec(resource_spec, score)
+		fixed_pod_spec = fix_spec(pod_spec, score)
 		output_filename = cli_args["output_filename"]
 		
 		if output_filename != "":
