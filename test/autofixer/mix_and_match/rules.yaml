@@ -1,0 +1,47 @@
+standard-missing-rules:
+    - field: "metadata.missing1"
+      allowed_values: ["missing-value1"]
+    - field: "metadata.missing2"
+      allowed_values: ["missing-value2"]
+    - field: "spec.selector.matchLabels.missingLabel1"
+      allowed_values: ["labelValue1"]
+    - field: "spec.selector.matchLabels.missingLabel2"
+      allowed_values: ["labelValue2"]
+    - field: "spec.template.metadata.labels.myLabel"
+      allowed_values: ["my-label"]
+    - field: "spec.template.anotherMissing"
+      allowed_values: ["missingValue"]
+
+containers-missing-rules:
+    - field: "spec.template.spec.containers[*].notMissing"
+      allowed_values: ["not-missing-value"]
+    - field: "spec.template.spec.containers[*].someMissing"
+      allowed_values: ["some-missing-new"]
+    - field: "spec.template.spec.containers[*].missingLabel1"
+      allowed_values: ["labelValue1"]
+    - field: "spec.template.spec.containers[*].missingLabel2"
+      allowed_values: ["labelValue2"]
+
+standard-wrong-rules:
+    - field: "metadata.name"
+      allowed_values: ["wrong-name"]
+    - field: "spec.replicas"
+      allowed_values: [2, 4]
+    - field: "spec.selector.matchLabels.app"
+      allowed_values: ["wrong-app-name"]
+    - field: "spec.template.metadata.labels.app"
+      allowed_values: ["wrong-app-label"]
+    - field: "spec.template.spec.securityContext.runAsUser"
+      allowed_values: [1000]
+    - field: "spec.template.spec.securityContext.runAsGroup"
+      allowed_values: [2000]
+
+containers-wrong-rules:
+    - field: "spec.template.spec.containers[*].name"
+      allowed_values: ["wrong-container-name"]
+    - field: "spec.template.spec.containers[*].image"
+      allowed_values: ["wrong-container-image"]
+    - field: "spec.template.spec.containers[*].notMissing"
+      allowed_values: ["wrong-missing-container-value"]
+    - field: "spec.template.spec.containers[*].command"
+      allowed_values: ["sleep 1h"]

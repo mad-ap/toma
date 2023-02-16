@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-name
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: test-app
+  template:
+    metadata:
+      labels:
+        app: test-app
+    spec:
+      containers:
+      - command: sleep 1h
+        image: wrong-container-image
+        name: wrong-container-name
+        notMissing: wrong-missing-container-value
+      - command: sleep 1h
+        image: wrong-container-image
+        name: wrong-container-name
+        notMissing: wrong-missing-container-value
+        someMissing: some-missing-old
+      - command: sleep 1h
+        image: wrong-container-image
+        name: wrong-container-name
+        notMissing: wrong-missing-container-value
+      securityContext:
+        runAsGroup: 2002
+        runAsUser: 1001

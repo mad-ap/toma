@@ -1,0 +1,9 @@
+containers-wrong-rules:
+    - field: "spec.template.spec.containers[*].name"
+      allowed_values: ["wrong-container-name"]
+    - field: "spec.template.spec.containers[*].image"
+      allowed_values: ["wrong-container-image"]
+    - field: "spec.template.spec.containers[*].notMissing"
+      allowed_values: ["wrong-missing-container-value"]
+    - field: "spec.template.spec.containers[*].command"
+      allowed_values: ["sleep 1h"]

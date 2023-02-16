@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wrong-name
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wrong-app-name
+  template:
+    metadata:
+      labels:
+        app: wrong-app-label
+    spec:
+      containers:
+      - command:
+        - sh
+        - -c
+        - sleep 1h
+        image: test-image-1
+        name: test-container-1
+      - command:
+        - sh
+        - -c
+        - sleep 1h
+        image: test-image-2
+        name: test-container-2
+      - command:
+        - sh
+        - -c
+        - sleep 1h
+        image: test-image-3
+        name: test-container-3
+      securityContext:
+        runAsGroup: 2000
+        runAsUser: 1000
