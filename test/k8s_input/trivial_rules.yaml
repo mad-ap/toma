@@ -1,0 +1,3 @@
+base:
+    - field: "spec.containers[*].name"
+      allowed_values: ["nginx"]

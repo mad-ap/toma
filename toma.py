@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#! /usr/local/bin/python3
 
 from sys import argv
 from os.path import *
@@ -15,10 +15,10 @@ def parse_argv(argv):
 			"output_filename" : ""}
 			
 	for i in range(len(argv)):
-		match(argv[i]):
+		match (argv[i]):
 			case "toma.py":
 				pass
-			case "--help" | "-h" :
+			case "--help" | "-h":
 				print_usage()
 				exit(0)
 			case "--file" | "-f":

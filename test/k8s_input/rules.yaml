@@ -1,0 +1,37 @@
+level1:
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+level2:
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+level3:
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+level4:
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+    - field: "some field"
+      value: ["some value 1", "some value 2"]
+
