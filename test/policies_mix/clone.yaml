@@ -1,0 +1,13 @@
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: "clone-kprobe"
+spec:
+  kprobes:
+  - call: "__x64_sys_clone"
+    syscall: true
+    selectors:
+    - matchNamespaces:
+      - namespace: "Pid"
+        operator: "NotIn"
+        values: ["host_ns"]

@@ -1,7 +1,0 @@
-baseline:
-    - field: spec.hostNetwork
-      allowed_values: [false, "not defined"]
-    - field: spec.hostPID
-      allowed_values: [false, "not defined"]
-    - field: spec.hostIPC
-      allowed_values: [false, "not defined"]

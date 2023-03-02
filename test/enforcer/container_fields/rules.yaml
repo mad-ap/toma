@@ -1,0 +1,12 @@
+containers-rules:
+    - field: "spec.containers[*].name"
+      allowed_values: ["wrong-container-name"]
+      policy: "policies/policy3.yaml"
+    - field: "spec.containers[*].image"
+      allowed_values: ["wrong-container-image"]
+      policy: "policies/policy2.yaml"
+    - field: "spec.containers[*].notMissing"
+      allowed_values: ["wrong-missing-container-value"]
+      policy: "policies/policy1.yaml"
+    - field: "spec.containers[*].command"
+      allowed_values: ["sleep 1h"]
