@@ -3,7 +3,7 @@
 from sys import argv
 from os import path, getcwd
 import yaml
-# comment branch
+
 # ============================ CLI ARGUMENTS HELPERS ============================
 def parse_argv(argv):
 	args = {"resource_spec" : "",
@@ -311,55 +311,93 @@ def classify_field(field_values, rule):
 	else:
 		return WRONG_FIELD
 
-def check_standard_rule(pod_spec, rule):
-	field_string = rule["field"]
-	# if field not present target will be False, otherwise the element
-	field_values = find_field(pod_spec, field_string)
-	# some rules allows fields to not be defined
-	print("field string: ", field_string)
-	print("field values: ", field_values)
+def check_rule_rec(node, fields, field_allowed_values):
+	# BASE CASE based on node and fields values we return classification
+	can_be_nd = "not defined" in field_allowed_values
+	needs_be_nd = can_be_nd and len(field_allowed_values) == 1
+	# if node is None means the last call didn't find the field
+	# but if can be not defined the field is right
+	if node is None:
+		print("Target is None")
+		if can_be_nd:
+			print("can be not defined")
+			print("It's right.")
+			return RIGHT_FIELD
+		else:
+			print("can not be not defined")
+			print("It's missing.")
+			return MISSING_FIELD
+	# if fields is empty, means that node contains the field object so we classify the field
+	elif len(fields) == 0:
+		print("Finished fields.")
+		# but if the only value is not defined the field must be empty
+		if needs_be_nd:
+			print("Need to not be defined")
+			print("It's wrong.")
+			return WRONG_FIELD
+		elif check_field_values(node, field_allowed_values) == True:
+			print("It's right.")
+			return RIGHT_FIELD
+		else:
+			print("It's wrong.")
+			return WRONG_FIELD
 
-	return classify_field(field_values, rule)
+	# RECURSION we go forward
+	else:
+		field = fields[0]
+		target = node
+		print("Target field = ", field)
+		# if the fields contains [*] we need to split the check
+		if field.endswith("[*]"):
+			field.removesuffix("[*]")
+			target = target.get(field)
 
-def check_containers_rule(pod_spec, rule):
+			if target is None and not can_be_nd:
+				return MISSING_FIELD
+			elif target is None and can_be_nd:
+				return RIGHT_FIELD
+			else:
+				results = []
+				# compute every result and store in list
+				for element in target:
+					result = check_rules_rec(element, fields[1:], field_allowed_values)
+					results.append(result)
+				# counting every result
+				n_right = results.count(RIGHT_FIELD)
+				n_missing = results.count(MISSING_FIELD)
+				n_wrong = results.count(WRONG_FIELD)
+				n_total = len(results)
+
+				# right if every field is right
+				if n_right == n_total:
+					print("It's right.")
+					return RIGHT_FIELD
+				# if more missing fields we return that
+				# otherwise we prioritize wrong fields
+				elif n_missing > n_wrong:
+					print("It's missing.")
+					return MISSING_FIELD
+				else:
+					print("It's wrong.")
+					return WRONG_FIELD
+
+		# if the field doesn't contain [*] we go forward
+		else:
+			# we try to get the field
+			# if None, the base case will return the classification
+			target = target.get(field)
+			return check_rule_rec(target, fields[1:], field_allowed_values)
+
+
+# given the rule, check if the field is correct
+def check_rule(pod_spec, rule):
 	field_string = rule["field"]
 	field_allowed_values = rule["allowed_values"]
 
-	# try to navigate until find containers field
-	containers_spec = get_containers_spec(pod_spec, field_string)
-	n_containers = len(containers_spec)
+	fields = field_string.split('.')
+	print("In check_rule with fields: ", fields)
+	return check_rule_rec(pod_spec, fields, field_allowed_values)
 
-	print("In checking containers rule")
-	print("field string: ", field_string)
-	print("allowed_values: ", field_allowed_values)
-
-	n_right_fields = 0
-	n_wrong_fields = 0
-	n_missing_fields = 0
-
-	# cutting field string after containers[*]
-	field_string = cut_containers_string(field_string)
-	for c in containers_spec:
-		field_values = find_field(c, field_string)
-		classification = classify_field(field_values, rule)
-
-		if classification == RIGHT_FIELD:
-			n_right_fields += 1
-		elif classification == WRONG_FIELD:
-			n_wrong_fields += 1
-		elif classification == MISSING_FIELD:
-			n_missing_fields += 1
-		else:
-			print_error("Cannot classify field")
-
-	# just if they're all ok they are right
-	if n_right_fields == n_containers:
-		return RIGHT_FIELD
-	# if there are more wrong we consider it wrong
-	elif n_wrong_fields > n_missing_fields:
-		return WRONG_FIELD
-	else:
-		return MISSING_FIELD
 
 # computes the score returning a score dictionary
 # for every security standard return 3 lists: right, wrong and missing rules
@@ -377,16 +415,10 @@ def compute_spec_score(pod_spec, rules):
 		rules_right = score[sec_std]["rules_right"]
 
 		# checks the rules keeping track of the missing and wrong fields
-		result = -1
 		for rule in rule_list:
 			print_debug("Checking rule: ", rule["field"])
-			if contained(rule["field"], "containers[*]"):
-				print_debug("It's a container rule")
-				result = check_containers_rule(pod_spec, rule)
-			else:
-				print_debug("It's a standard rule")
-				result = check_standard_rule(pod_spec, rule)
-
+			result = -1
+			result = check_rule(pod_spec, rule)
 			if result == RIGHT_FIELD:
 				print_debug("It's right.")
 				rules_right.append(rule)
