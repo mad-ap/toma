@@ -1,0 +1,7 @@
+baseline:
+    - field: "spec.template.spec.volumes[*].hostPath"
+      allowed_values: ["not defined"]
+    - field: "spec.template.spec.containers[*].ports[*].hostPort"
+      allowed_values: ["not defined"]
+    - field: "spec.template.spec.securityContext.sysctls[*].name"
+      allowed_values: ["kernel.shm_rmid_forced", "net.ipv4.ip_local_port_range", "net.ipv4.ip_unprivileged_port_start", "net.ipv4.tcp_syncookies", "net.ipv4.ping_group_range", "not defined"]

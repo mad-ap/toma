@@ -349,8 +349,10 @@ def check_rule_rec(node, fields, field_allowed_values):
 		print("Target field = ", field)
 		# if the fields contains [*] we need to split the check
 		if field.endswith("[*]"):
-			field.removesuffix("[*]")
+			field = field.removesuffix("[*]")
+			print("Target container field = ", field)
 			target = target.get(field)
+			print("Got --> ", target)
 
 			if target is None and not can_be_nd:
 				return MISSING_FIELD
@@ -360,7 +362,7 @@ def check_rule_rec(node, fields, field_allowed_values):
 				results = []
 				# compute every result and store in list
 				for element in target:
-					result = check_rules_rec(element, fields[1:], field_allowed_values)
+					result = check_rule_rec(element, fields[1:], field_allowed_values)
 					results.append(result)
 				# counting every result
 				n_right = results.count(RIGHT_FIELD)
@@ -386,6 +388,7 @@ def check_rule_rec(node, fields, field_allowed_values):
 			# we try to get the field
 			# if None, the base case will return the classification
 			target = target.get(field)
+			print("Got --> ", target)
 			return check_rule_rec(target, fields[1:], field_allowed_values)
 
 
@@ -640,7 +643,7 @@ if __name__ == '__main__':
 	print_rules(rules)
 
 	scorer = cli_args["score"]
-	score = compute_spec_score(pod_spec, rules)
+	score = compute_spec_score(resource_spec, rules)
 	if scorer:
 		print_separator("SCORE")
 		print("")
